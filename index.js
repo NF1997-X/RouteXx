@@ -19,6 +19,7 @@ const candidates = [
 for (const candidate of candidates) {
   if (fs.existsSync(candidate)) {
     try {
+      console.log(`Loading application entry: ${candidate}`);
       require(candidate);
       return;
     } catch (err) {
