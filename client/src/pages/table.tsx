@@ -57,7 +57,7 @@ export default function TablePage() {
   const [editModeLoading, setEditModeLoading] = useState(false);
   const [pageDescription, setPageDescription] = useState("- Interactive table with Drag & Drop , Calculations , and Image Gallery\n\n- This Routes for Driver Vending Mechine , FamilyMart only");
   const [pageTitle, setPageTitle] = useState("Content");
-  const [isHeaderExpanded, setIsHeaderExpanded] = useState(true);
+  const [isHeaderExpanded, setIsHeaderExpanded] = useState(false);
   const [optimizationModalOpen, setOptimizationModalOpen] = useState(false);
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
@@ -78,6 +78,7 @@ export default function TablePage() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [bulkColorRoute, setBulkColorRoute] = useState("");
   const [bulkColor, setBulkColor] = useState("#3b82f6");
+  const [showBulkColorModal, setShowBulkColorModal] = useState(false);
   const tableRef = useRef<HTMLDivElement>(null);
   const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
@@ -803,23 +804,6 @@ export default function TablePage() {
     // Show loading spinner for 1 second
     setEditModeLoading(true);
     
-    // Auto-save layout preferences before exiting
-    try {
-      const userId = getUserId();
-      const layoutData = {
-        userId,
-        columnVisibility: Object.fromEntries(
-          columns.map(col => [col.id, visibleColumns.includes(col.id)])
-        ),
-        columnOrder,
-      };
-      
-      await apiRequest('POST', '/api/layout', layoutData);
-    } catch (error) {
-      console.error('Failed to auto-save layout:', error);
-      // Continue with exit even if save fails
-    }
-    
     // Loading delay
     await new Promise(resolve => setTimeout(resolve, 1000));
     
@@ -830,7 +814,7 @@ export default function TablePage() {
     
     toast({
       title: "Edit Mode Disabled",
-      description: "Layout auto-saved. Edit mode has been turned off and password cleared.",
+      description: "Edit mode has been turned off and password cleared.",
     });
   };
 
@@ -868,9 +852,6 @@ export default function TablePage() {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
     };
     return date.toLocaleString('en-US', options);
   };
@@ -1124,6 +1105,7 @@ export default function TablePage() {
           onOptimizeRoute={() => setOptimizationModalOpen(true)}
           onCalculateTolls={handleCalculateTolls}
           onSaveLayout={() => {}}
+          onBulkColorEdit={() => setShowBulkColorModal(true)}
           onSavedLinks={() => setSavedLinksModalOpen(true)}
           onShowTutorial={() => setShowTutorial(true)}
           onAddColumn={async (columnData) => {
@@ -1152,17 +1134,17 @@ export default function TablePage() {
           onToggleTheme={toggleTheme}
         />
       </div>
-      <main className="pt-[72px] animate-in slide-in-from-bottom-4 fade-in duration-700 delay-150">
-        <div className="container mx-auto px-4 py-8 max-w-3xl" data-testid="table-page">
+      <main className="pt-[72px] pb-20 animate-in slide-in-from-bottom-4 fade-in duration-700 delay-150">
+        <div className="container mx-auto px-4 py-8" data-testid="table-page">
           {/* Header Section - Carousel with Pages */}
           <div className="mb-8 relative animate-in fade-in slide-in-from-top-2 duration-600 delay-300">
             {sortedPages.length > 0 ? (
               <Carousel 
-                className="w-full pb-16" 
+                className="w-full pb-2" 
                 opts={{ loop: sortedPages.length > 1 }}
                 setApi={setCarouselApi}
               >
-                <div className="overflow-hidden rounded-xl border border-blue-200 dark:border-blue-500/30 bg-gradient-to-r from-blue-50/80 to-white/80 dark:from-blue-950/40 dark:to-gray-900/40 backdrop-blur-sm shadow-lg transition-all duration-500">
+                <div className="overflow-hidden rounded-2xl border-2 border-gray-300 dark:border-white/10 bg-white/90 dark:bg-black/30 backdrop-blur-2xl shadow-xl transition-all duration-500">
                   <CarouselContent>
                   {sortedPages.map((page, index) => {
                     const isCurrentSlide = index === currentSlideIndex;
@@ -1181,61 +1163,51 @@ export default function TablePage() {
                     >
                       {/* Header Bar */}
                       <div 
-                        className="flex items-center justify-between px-6 py-3 cursor-pointer hover:bg-blue-100/50 dark:hover:bg-blue-900/30 transition-colors duration-300 text-sm"
+                        className="flex items-center justify-between px-6 py-3 cursor-pointer hover:bg-blue-100/30 dark:hover:bg-blue-900/20 transition-colors duration-300 text-sm bg-transparent border-transparent"
                         onClick={() => setIsHeaderExpanded(!isHeaderExpanded)}
                       >
                         <div className="flex items-center gap-3 flex-1">
-                          {/* Left Swipe Hint - Animated Arrows */}
-                          {sortedPages.length > 1 && showSlideHints && (
-                            <div className="flex items-center gap-0.5">
-                              <style>{`
-                                @keyframes slideLeft {
-                                  0%, 100% { opacity: 0.3; transform: translateX(0px); }
-                                  50% { opacity: 1; transform: translateX(-4px); }
-                                }
-                                .arrow-left-1 { animation: slideLeft 1.5s ease-in-out infinite; animation-delay: 0s; }
-                                .arrow-left-2 { animation: slideLeft 1.5s ease-in-out infinite; animation-delay: 0.2s; }
-                                .arrow-left-3 { animation: slideLeft 1.5s ease-in-out infinite; animation-delay: 0.4s; }
-                              `}</style>
-                              <svg className="w-4 h-4 text-blue-500 dark:text-blue-400 arrow-left-1" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                              <svg className="w-4 h-4 text-blue-500 dark:text-blue-400 arrow-left-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                              <svg className="w-4 h-4 text-blue-500 dark:text-blue-400 arrow-left-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                            </div>
-                          )}
-                          
                           <h1 className="font-bold text-gray-500 dark:text-blue-300" style={{fontSize: '12px'}} data-testid={`page-title-${page.id}`}>
                             {page.title || "Untitled"}
                           </h1>
                           
-                          {/* Right Swipe Hint - Animated Arrows */}
+                          {/* Swipe Right Hint - Animated Chevrons */}
                           {sortedPages.length > 1 && showSlideHints && (
-                            <div className="flex items-center gap-0.5">
+                            <div className="flex items-center relative">
                               <style>{`
-                                @keyframes slideRight {
-                                  0%, 100% { opacity: 0.3; transform: translateX(0px); }
-                                  50% { opacity: 1; transform: translateX(4px); }
+                                @keyframes chevron1 {
+                                  0%, 15% { opacity: 1; transform: translateX(0px) scale(1); }
+                                  20%, 100% { opacity: 0; transform: translateX(-5px) scale(0.9); }
                                 }
-                                .arrow-right-1 { animation: slideRight 1.5s ease-in-out infinite; animation-delay: 0s; }
-                                .arrow-right-2 { animation: slideRight 1.5s ease-in-out infinite; animation-delay: 0.2s; }
-                                .arrow-right-3 { animation: slideRight 1.5s ease-in-out infinite; animation-delay: 0.4s; }
+                                @keyframes chevron2 {
+                                  0%, 15% { opacity: 0; transform: translateX(5px) scale(0.9); }
+                                  20%, 35% { opacity: 1; transform: translateX(0px) scale(1); }
+                                  40%, 100% { opacity: 0; transform: translateX(-5px) scale(0.9); }
+                                }
+                                @keyframes chevron3 {
+                                  0%, 35% { opacity: 0; transform: translateX(5px) scale(0.9); }
+                                  40%, 55% { opacity: 1; transform: translateX(0px) scale(1); }
+                                  60%, 100% { opacity: 0; transform: translateX(-5px) scale(0.9); }
+                                }
+                                @keyframes chevron5 {
+                                  0%, 55% { opacity: 0; transform: translateX(5px) scale(0.9); }
+                                  60%, 65% { opacity: 1; transform: translateX(0px) scale(1); }
+                                  70%, 85% { opacity: 0; transform: translateX(-5px) scale(0.9); }
+                                  90%, 100% { opacity: 1; transform: translateX(0px) scale(1.05); }
+                                }
+                                .chevron-1 { animation: chevron1 4s ease-in-out infinite; }
+                                .chevron-2 { animation: chevron2 4s ease-in-out infinite; }
+                                .chevron-3 { animation: chevron3 4s ease-in-out infinite; }
+                                .chevron-5 { animation: chevron5 4s ease-in-out infinite; }
                               `}</style>
-                              <svg className="w-4 h-4 text-blue-500 dark:text-blue-400 arrow-right-1" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                              </svg>
-                              <svg className="w-4 h-4 text-blue-500 dark:text-blue-400 arrow-right-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                              </svg>
-                              <svg className="w-4 h-4 text-blue-500 dark:text-blue-400 arrow-right-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                              </svg>
+                              <span className="text-lg font-bold bg-gradient-to-r from-blue-500 to-cyan-500 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent chevron-1 absolute" style={{lineHeight: 1}}>{'<'}</span>
+                              <span className="text-lg font-bold bg-gradient-to-r from-blue-500 to-cyan-500 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent chevron-2 absolute" style={{lineHeight: 1}}>{'<<'}</span>
+                              <span className="text-lg font-bold bg-gradient-to-r from-blue-500 to-cyan-500 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent chevron-3 absolute" style={{lineHeight: 1}}>{'<<<'}</span>
+                              <span className="text-lg font-bold bg-gradient-to-r from-blue-500 to-cyan-500 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent chevron-5 absolute" style={{lineHeight: 1}}>{'<<<<<'}</span>
+                              <span className="text-lg font-bold opacity-0" style={{lineHeight: 1}}>{'<<<<<'}</span>
                             </div>
                           )}
+                          
                           {editMode && (
                             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                               <Button
@@ -1284,7 +1256,7 @@ export default function TablePage() {
                         }`}
                       >
                         <div className="px-4 pb-3 border-t border-blue-200/50 dark:border-blue-500/20 pt-3 bg-gradient-to-b from-blue-50/30 to-transparent dark:from-blue-950/20 dark:to-transparent">
-                            <dl className="space-y-1" style={{fontSize: '10px', lineHeight: '1.4'}} data-testid={`page-description-${page.id}`}>
+                            <dl className="space-y-1" style={{fontSize: '10.5px', lineHeight: '1.4'}} data-testid={`page-description-${page.id}`}>
                               {(page.description || "").split('\n').map((line, lineIndex) => {
                                 const trimmedLine = line.trim();
                                 if (!trimmedLine) return null;
@@ -1294,9 +1266,9 @@ export default function TablePage() {
                                   const [key, ...valueParts] = trimmedLine.split(':');
                                   const value = valueParts.join(':').trim();
                                   return (
-                                    <div key={lineIndex} className="flex items-start gap-3" style={{lineHeight: '1.4'}}>
-                                      <dt className="w-18 flex-shrink-0 font-semibold text-blue-600 dark:text-blue-400" style={{margin: 0, padding: 0}}>
-                                        {key.trim()}
+                                    <div key={lineIndex} className="flex items-start gap-2" style={{lineHeight: '1.4'}}>
+                                      <dt className="w-24 flex-shrink-0 font-semibold text-blue-600 dark:text-blue-400" style={{margin: 0, padding: 0}}>
+                                        {key.trim()}:
                                       </dt>
                                       <dd className="flex-1 text-gray-700 dark:text-gray-300" style={{margin: 0, padding: 0}}>
                                         {value}
@@ -1315,7 +1287,7 @@ export default function TablePage() {
                             
                             {/* Date and Time Display - Below Content */}
                             <div className="mt-3 pt-2 border-t border-blue-200/30 dark:border-blue-500/10 flex justify-end">
-                              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">
+                              <div className="text-gray-500 dark:text-gray-500 font-normal" style={{fontSize: '10px'}}>
                                 {formatDateTime(currentTime)}
                               </div>
                             </div>
@@ -1340,25 +1312,9 @@ export default function TablePage() {
                     </div>
                   )}
                 </div>
-                
-                {/* Carousel Navigation Arrows - Below Container */}
-                {sortedPages.length > 1 && editMode && (
-                  <div className="flex justify-center gap-4 mt-4">
-                    <CarouselPrevious 
-                      className="relative left-0 top-0 translate-x-0 translate-y-0" 
-                      data-testid="button-prev-page"
-                      onClick={handleCarouselInteraction}
-                    />
-                    <CarouselNext 
-                      className="relative right-0 top-0 translate-x-0 translate-y-0" 
-                      data-testid="button-next-page"
-                      onClick={handleCarouselInteraction}
-                    />
-                  </div>
-                )}
               </Carousel>
             ) : (
-              <div className="overflow-hidden rounded-xl border border-blue-200 dark:border-blue-500/30 bg-gradient-to-r from-blue-50/80 to-white/80 dark:from-blue-950/40 dark:to-gray-900/40 backdrop-blur-sm shadow-lg transition-all duration-500 px-6 py-4 text-center text-gray-500">
+              <div className="overflow-hidden rounded-2xl border-2 border-gray-300 dark:border-white/10 bg-white/90 dark:bg-black/30 backdrop-blur-2xl shadow-xl transition-all duration-500 px-6 py-4 text-center text-gray-500">
                 <p>No pages available</p>
               </div>
             )}
@@ -1541,77 +1497,99 @@ export default function TablePage() {
         })()
       )}
 
-      {/* Bulk Edit Marker Color - Only in Edit Mode */}
-      {editMode && (
-        <div className="animate-in fade-in duration-300 mb-6">
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 border-2 border-purple-300 dark:border-purple-700 shadow-xl rounded-2xl overflow-hidden">
-            <div className="p-4">
-              <h2 className="text-sm font-bold mb-3 bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent flex items-center gap-2">
-                🎨 Bulk Edit Marker Color by Route
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                <div className="md:col-span-6">
-                  <label className="text-xs font-semibold mb-1 block text-gray-800 dark:text-gray-200">Select Route</label>
-                  <select
-                    value={bulkColorRoute}
-                    onChange={(e) => setBulkColorRoute(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-white dark:bg-black/40 border-transparent rounded-xl font-medium shadow-sm transition-colors"
-                  >
-                    <option value="">-- Select Route --</option>
-                    {routeOptions.map((route) => (
-                      <option key={route} value={route}>
-                        {route}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-xs font-semibold mb-1 block text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                    <span>New Color</span>
-                    {bulkColorRoute && (() => {
-                      const currentRow = rows.find(r => r.route === bulkColorRoute);
-                      const currentColor = currentRow?.markerColor || '#3b82f6';
-                      return (
-                        <span className="flex items-center gap-1 text-[10px] font-normal text-gray-600 dark:text-gray-400">
-                          (Current: 
-                          <span 
-                            className="inline-block w-3 h-3 rounded-sm border border-gray-400 dark:border-gray-500"
-                            style={{ backgroundColor: currentColor }}
-                            title={currentColor}
-                          />)
-                        </span>
-                      );
-                    })()}
-                  </label>
-                  <input
-                    type="color"
-                    value={bulkColor}
-                    onChange={(e) => setBulkColor(e.target.value)}
-                    className="h-[38px] w-full rounded-xl border-2 border-purple-300 dark:border-purple-700 cursor-pointer shadow-sm hover:scale-105 transition-transform"
-                  />
-                </div>
-                <div className="md:col-span-4">
-                  <Button
-                    onClick={handleBulkColorUpdate}
-                    disabled={!bulkColorRoute || bulkUpdateColorMutation.isPending}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-sm h-[38px] px-6 shadow-lg hover:shadow-xl transition-all"
-                  >
-                    {bulkUpdateColorMutation.isPending ? "Updating..." : "🎨 Update Color"}
-                  </Button>
-                </div>
-              </div>
-              <div className="mt-3 px-1 py-2 bg-purple-100/50 dark:bg-purple-900/20 rounded-lg">
-                <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">
-                  {bulkColorRoute 
-                    ? `✓ Will update marker colors for ALL locations in route "${bulkColorRoute}"`
-                    : "💡 Select a route above to bulk update marker colors for all locations in that route"
-                  }
-                </p>
-              </div>
+      {/* Bulk Edit Marker Color Modal */}
+      <Dialog open={showBulkColorModal} onOpenChange={setShowBulkColorModal}>
+        <DialogContent className="sm:max-w-lg animate-in zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 duration-300 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/40 dark:to-pink-950/40 border-2 border-purple-300 dark:border-purple-700 shadow-2xl">
+          <DialogHeader className="space-y-3">
+            <div className="mx-auto w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-full flex items-center justify-center animate-in zoom-in-50 duration-500 delay-100">
+              <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+              </svg>
+            </div>
+            <DialogTitle className="text-center bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent" style={{fontSize: '14px'}}>
+              🎨 Bulk Edit Marker Color
+            </DialogTitle>
+            <DialogDescription className="text-center text-gray-600 dark:text-gray-400" style={{fontSize: '11px'}}>
+              Update marker colors for all locations in a selected route
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-xs font-semibold mb-2 block text-gray-800 dark:text-gray-200">Select Route</label>
+              <select
+                value={bulkColorRoute}
+                onChange={(e) => setBulkColorRoute(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-black/40 border border-purple-300 dark:border-purple-700 rounded-xl font-medium shadow-sm transition-colors"
+              >
+                <option value="">-- Select Route --</option>
+                {routeOptions.map((route) => (
+                  <option key={route} value={route}>
+                    {route}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="text-xs font-semibold mb-2 block text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                <span>New Color</span>
+                {bulkColorRoute && (() => {
+                  const currentRow = rows.find(r => r.route === bulkColorRoute);
+                  const currentColor = currentRow?.markerColor || '#3b82f6';
+                  return (
+                    <span className="flex items-center gap-1 text-[10px] font-normal text-gray-600 dark:text-gray-400">
+                      (Current: 
+                      <span 
+                        className="inline-block w-3 h-3 rounded-sm border border-gray-400 dark:border-gray-500"
+                        style={{ backgroundColor: currentColor }}
+                        title={currentColor}
+                      />)
+                    </span>
+                  );
+                })()}
+              </label>
+              <input
+                type="color"
+                value={bulkColor}
+                onChange={(e) => setBulkColor(e.target.value)}
+                className="h-12 w-full rounded-xl border-2 border-purple-300 dark:border-purple-700 cursor-pointer shadow-sm hover:scale-105 transition-transform"
+              />
+            </div>
+            
+            <div className="px-3 py-2 bg-purple-100/50 dark:bg-purple-900/20 rounded-lg">
+              <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">
+                {bulkColorRoute 
+                  ? `✓ Will update marker colors for ALL locations in route "${bulkColorRoute}"`
+                  : "💡 Select a route above to bulk update marker colors for all locations in that route"
+                }
+              </p>
             </div>
           </div>
-        </div>
-      )}
+          
+          <DialogFooter className="flex-row justify-center gap-3 sm:justify-center mt-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowBulkColorModal(false)}
+              className="min-w-[100px] border-purple-300 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-900/30"
+              style={{fontSize: '11px'}}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                handleBulkColorUpdate();
+                setShowBulkColorModal(false);
+              }}
+              disabled={!bulkColorRoute || bulkUpdateColorMutation.isPending}
+              className="min-w-[100px] bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg"
+              style={{fontSize: '11px'}}
+            >
+              {bulkUpdateColorMutation.isPending ? "Updating..." : "🎨 Update Color"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Main Table */}
       <div ref={tableRef} className="animate-in fade-in slide-in-from-bottom-3 duration-700 delay-500">
@@ -1896,6 +1874,7 @@ export default function TablePage() {
       <SavedLinksModal
         open={savedLinksModalOpen}
         onOpenChange={setSavedLinksModalOpen}
+        editMode={editMode}
       />
 
       {/* Tutorial - Controlled from Navigation Help button */}

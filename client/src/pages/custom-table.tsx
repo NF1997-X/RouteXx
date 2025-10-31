@@ -1,20 +1,28 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useRoute } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { DataTable } from "@/components/data-table";
 import { useTableData } from "@/hooks/use-table-data";
 import { LoadingOverlay } from "@/components/skeleton-loader";
 import { Footer } from "@/components/footer";
-import { Database } from "lucide-react";
+import { ColumnCustomizationModal } from "@/components/column-customization-modal";
+import { RouteOptimizationModal } from "@/components/route-optimization-modal";
+import { Database, Info, Eye, PlayCircle } from "lucide-react";
 import { calculateDistance } from "@/utils/distance";
+import { useToast } from "@/hooks/use-toast";
 import type { CustomTable, TableColumn, TableRow } from "@shared/schema";
 
 export default function CustomTableView() {
   const [, params] = useRoute("/custom/:shareId");
   const shareId = params?.shareId;
 
+  // Read preview mode from URL parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const previewMode = urlParams.get('preview') === 'true';
+
   const { 
-    columns, 
+    columns,
+    rows: allRows = [],
     isLoading,
   } = useTableData();
 
@@ -25,16 +33,35 @@ export default function CustomTableView() {
   });
 
   // Fetch custom table rows
-  const { data: rows = [], isLoading: isLoadingRows } = useQuery<TableRow[]>({
+  const { data: customTableRows = [], isLoading: isLoadingRows } = useQuery<TableRow[]>({
     queryKey: [`/api/custom-tables/${customTable?.id}/rows`],
     enabled: !!customTable?.id,
   });
+
+  // Ensure QL Kitchen is always included at the top
+  const rows = useMemo(() => {
+    const qlKitchenRow = allRows.find(row => row.location === "QL Kitchen");
+    const hasQLKitchen = customTableRows.some(row => row.location === "QL Kitchen");
+    
+    if (qlKitchenRow && !hasQLKitchen && customTableRows.length > 0) {
+      return [qlKitchenRow, ...customTableRows];
+    }
+    
+    return customTableRows;
+  }, [allRows, customTableRows]);
 
   // Local state for interactive features (delivery filter ONLY - route filter hidden but still applied)
   const [searchTerm, setSearchTerm] = useState("");
   const [deliveryFilters, setDeliveryFilters] = useState<string[]>([]);
   const [routeFilters, setRouteFilters] = useState<string[]>([]);
   const [selectedRowForImage, setSelectedRowForImage] = useState<string | null>(null);
+  const [tempRowOrder, setTempRowOrder] = useState<string[]>([]);
+  const [tempColumnOrder, setTempColumnOrder] = useState<string[]>([]);
+  const [customizationModalOpen, setCustomizationModalOpen] = useState(false);
+  const [optimizationModalOpen, setOptimizationModalOpen] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([]);
+  const { toast } = useToast();
+
 
   // Apply filters and column visibility
   const { filteredRows, displayColumns, deliveryOptions } = useMemo(() => {
@@ -52,16 +79,20 @@ export default function CustomTableView() {
     // Filter rows (clone to avoid mutating query cache)
     let filtered = [...rows];
     
-    // Apply delivery alternate day-based filtering
+    // EXCLUDE inactive rows from custom tables (only show active rows)
+    filtered = filtered.filter(row => row.active !== false);
+    
+    // Apply delivery alternate day-based filtering AND code sorting
     const today = new Date().getDay(); // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
     const isAlt1Day = [1, 3, 5, 0].includes(today); // Mon, Wed, Fri, Sun
     const isAlt2Day = [2, 4, 6].includes(today); // Tue, Thu, Sat
     
-    // Sort based on delivery alternate and current day
+    // Sort based on delivery alternate (primary) and code (secondary)
     filtered = filtered.sort((a, b) => {
       const aAlt = a.deliveryAlt || "normal";
       const bAlt = b.deliveryAlt || "normal";
       
+      // PRIMARY SORT: Delivery alternate priority
       // Inactive always at bottom
       if (aAlt === "inactive" && bAlt !== "inactive") return 1;
       if (aAlt !== "inactive" && bAlt === "inactive") return -1;
@@ -77,7 +108,10 @@ export default function CustomTableView() {
         if (aAlt === "alt1" && (bAlt === "alt2" || bAlt === "normal")) return 1;
       }
       
-      return 0;
+      // SECONDARY SORT: Code column (less to greater / ascending)
+      const codeA = a.code || "";
+      const codeB = b.code || "";
+      return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
     });
     
     // Apply route filters
@@ -100,9 +134,19 @@ export default function CustomTableView() {
     }
 
     // Use all columns as visible, but hide latitude, longitude, and tollPrice (not in edit mode)
-    const visibleCols = columns.filter(col => 
+    let visibleCols = columns.filter(col => 
       col.dataKey !== 'latitude' && col.dataKey !== 'longitude' && col.dataKey !== 'tollPrice'
     );
+
+    // Make sure kilometer column is included if it exists
+    const hasKilometerCol = visibleCols.some(col => col.dataKey === 'kilometer');
+    if (!hasKilometerCol) {
+      // Add kilometer column if not present
+      const kilometerCol = columns.find(col => col.dataKey === 'kilometer');
+      if (kilometerCol) {
+        visibleCols = [...visibleCols, kilometerCol];
+      }
+    }
 
     return { 
       filteredRows: filtered, 
@@ -203,6 +247,10 @@ export default function CustomTableView() {
 
   const readOnlyReorderRowsMutation = useMutation<TableRow[], Error, string[]>({
     mutationFn: async (rowIds: string[]) => {
+      if (previewMode) {
+        setTempRowOrder(rowIds);
+      }
+      
       const reordered = rowIds
         .map(id => rows.find(r => r.id === id))
         .filter((r): r is TableRow => r !== undefined);
@@ -212,6 +260,10 @@ export default function CustomTableView() {
 
   const readOnlyReorderColumnsMutation = useMutation<TableColumn[], Error, string[]>({
     mutationFn: async (columnIds: string[]) => {
+      if (previewMode) {
+        setTempColumnOrder(columnIds);
+      }
+      
       const reordered = columnIds
         .map(id => columns.find(c => c.id === id))
         .filter((c): c is TableColumn => c !== undefined);
@@ -229,6 +281,60 @@ export default function CustomTableView() {
     setSearchTerm("");
     setDeliveryFilters([]);
   };
+
+  // Handle column customization in preview mode
+  const handleApplyColumnCustomization = (newVisibleColumns: string[]) => {
+    if (previewMode) {
+      setVisibleColumns(newVisibleColumns);
+      toast({
+        title: "Preview Mode",
+        description: "Column visibility changed temporarily. Changes won't be saved.",
+        duration: 3000,
+      });
+    }
+  };
+
+  // Handle route optimization in preview mode
+  const handleApplyRouteOptimization = (rowIds: string[]) => {
+    if (previewMode) {
+      setTempRowOrder(rowIds);
+    }
+  };
+
+  // Apply temp order to preserve calculated data (kilometer, segment distance)
+  const displayRows = useMemo(() => {
+    if (previewMode && tempRowOrder.length > 0) {
+      return tempRowOrder
+        .map(id => rowsWithDistances.find(r => r.id === id))
+        .filter((r): r is typeof rowsWithDistances[number] => r !== undefined);
+    }
+    return rowsWithDistances;
+  }, [previewMode, tempRowOrder, rowsWithDistances]);
+
+  // Initialize visibleColumns with all columns when columns load
+  React.useEffect(() => {
+    if (columns.length > 0 && visibleColumns.length === 0) {
+      setVisibleColumns(columns.map(c => c.id));
+    }
+  }, [columns]);
+
+  const displayColumnsOrdered = useMemo(() => {
+    let cols = displayColumns;
+    
+    // Apply temp column order if preview mode
+    if (previewMode && tempColumnOrder.length > 0) {
+      cols = tempColumnOrder
+        .map(id => displayColumns.find(c => c.id === id))
+        .filter((c): c is typeof displayColumns[number] => c !== undefined);
+    }
+    
+    // Apply visible columns filter if preview mode and visibleColumns is set
+    if (previewMode && visibleColumns.length > 0) {
+      cols = cols.filter(c => visibleColumns.includes(c.id));
+    }
+    
+    return cols;
+  }, [previewMode, tempColumnOrder, displayColumns, visibleColumns]);
 
   // Smart loading - intro vs navigation
   const [minLoadingComplete, setMinLoadingComplete] = React.useState(false);
@@ -322,7 +428,7 @@ export default function CustomTableView() {
           <div className="flex h-14 items-center justify-between text-[12px]">
             <div className="flex items-center space-x-2">
               <div className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden">
+                <div className="flex h-8 w-8 items-center justify-center rounded-none overflow-hidden">
                   <img 
                     src="/assets/Logofm.png" 
                     alt="Logo" 
@@ -341,12 +447,90 @@ export default function CustomTableView() {
         </div>
       </nav>
 
-      <main className="pt-[56px]">
+      {/* Mode Banner */}
+      <div className="fixed top-[56px] left-0 right-0 z-40 bg-gradient-to-r from-blue-500/90 via-blue-600/90 to-blue-700/90 dark:from-blue-600/90 dark:via-blue-700/90 dark:to-blue-800/90 backdrop-blur-sm border-b-2 border-blue-400/50 dark:border-blue-500/50 shadow-lg">
+        <div className="container mx-auto px-4 py-2.5">
+          <div className="flex items-center justify-center gap-2 text-white">
+            {previewMode ? (
+              <>
+                <PlayCircle className="h-4 w-4 flex-shrink-0 animate-pulse" />
+                <span className="text-xs font-medium">
+                  🎮 Preview Mode: Interactive playground - changes are temporary and won't be saved
+                </span>
+              </>
+            ) : (
+              <>
+                <Eye className="h-4 w-4 flex-shrink-0" />
+                <span className="text-xs font-medium">
+                  📖 Read-Only Mode: View only, no interactions
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <main className="pt-[96px]">
         <div className="container mx-auto px-4 py-8">
-          {/* Data Table with all interactive features enabled */}
+          {/* Info Banner - Delivery OFF, Expired Color */}
+          <div className="mb-4 p-4 bg-gradient-to-r from-blue-50/80 to-cyan-50/80 dark:from-blue-900/30 dark:to-cyan-900/30 rounded-lg border-2 border-blue-200/50 dark:border-blue-700/50 backdrop-blur-sm shadow-md">
+            <div className="flex flex-col gap-3 text-xs">
+              {/* Delivery OFF Status */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-semibold text-blue-900 dark:text-blue-100">
+                  🗓️ Delivery OFF:
+                </span>
+                <span className="text-blue-800 dark:text-blue-200 font-medium">
+                  {(() => {
+                    const today = new Date().getDay(); // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+                    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                    const isAlt1Day = [1, 3, 5, 0].includes(today); // Mon, Wed, Fri, Sun
+                    const isAlt2Day = [2, 4, 6].includes(today); // Tue, Thu, Sat
+                    
+                    if (isAlt1Day) {
+                      return `Alt 2 (${dayNames[today]})`;
+                    } else if (isAlt2Day) {
+                      return `Alt 1 (${dayNames[today]})`;
+                    }
+                    return dayNames[today];
+                  })()}
+                </span>
+              </div>
+              
+              {/* Expired Color Indicator */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-semibold text-blue-900 dark:text-blue-100 flex-shrink-0">
+                  🚫 Expired Color:
+                </span>
+                <div className="flex items-center gap-1.5">
+                  {(() => {
+                    const today = new Date().getDay(); // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+                    const dayColors = [
+                      { name: 'Purple', bg: 'bg-purple-400', border: 'border-purple-600' },
+                      { name: 'Pink', bg: 'bg-pink-400', border: 'border-pink-600' },
+                      { name: 'Yellow', bg: 'bg-yellow-400', border: 'border-yellow-600' },
+                      { name: 'Blue', bg: 'bg-blue-400', border: 'border-blue-600' },
+                      { name: 'Orange', bg: 'bg-orange-400', border: 'border-orange-600' },
+                      { name: 'Brown', bg: 'bg-amber-700', border: 'border-amber-900' },
+                      { name: 'Green', bg: 'bg-green-400', border: 'border-green-600' }
+                    ];
+                    const todayColor = dayColors[today];
+                    return (
+                      <>
+                        <div className={`w-3 h-3 rounded-full ${todayColor.bg} border ${todayColor.border} shadow-sm`}></div>
+                        <span className="text-blue-800 dark:text-blue-200 font-medium">{todayColor.name}</span>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Data Table with conditional interactive features based on preview mode */}
           <DataTable
-            rows={rowsWithDistances}
-            columns={displayColumns}
+            rows={displayRows}
+            columns={displayColumnsOrdered}
             editMode={false}
             isSharedView={true}
             hideShareButton={true}
@@ -357,18 +541,18 @@ export default function CustomTableView() {
             onReorderColumns={readOnlyReorderColumnsMutation as any}
             onDeleteColumn={readOnlyDeleteColumnMutation as any}
             onSelectRowForImage={setSelectedRowForImage}
-            onShowCustomization={() => {}}
-            onOptimizeRoute={() => {}}
+            onShowCustomization={previewMode ? () => setCustomizationModalOpen(true) : () => {}}
+            onOptimizeRoute={previewMode ? () => setOptimizationModalOpen(true) : () => {}}
             isAuthenticated={false}
-            searchTerm={searchTerm}
-            onSearchTermChange={setSearchTerm}
+            searchTerm={previewMode ? searchTerm : ""}
+            onSearchTermChange={previewMode ? setSearchTerm : () => {}}
             filterValue={[]}
             onFilterValueChange={() => {}}
-            deliveryFilterValue={deliveryFilters}
-            onDeliveryFilterValueChange={setDeliveryFilters}
+            deliveryFilterValue={previewMode ? deliveryFilters : []}
+            onDeliveryFilterValueChange={previewMode ? setDeliveryFilters : () => {}}
             routeOptions={[]}
-            deliveryOptions={deliveryOptions}
-            onClearAllFilters={handleClearAllFilters}
+            deliveryOptions={previewMode ? deliveryOptions : []}
+            onClearAllFilters={previewMode ? handleClearAllFilters : () => {}}
             filteredRowsCount={rowsWithDistances.length}
             totalRowsCount={rows.length}
           />
@@ -376,6 +560,29 @@ export default function CustomTableView() {
       </main>
 
       <Footer editMode={false} />
+
+      {/* Column Customization Modal */}
+      {previewMode && (
+        <ColumnCustomizationModal
+          open={customizationModalOpen}
+          onOpenChange={setCustomizationModalOpen}
+          columns={columns}
+          visibleColumns={visibleColumns}
+          onApplyChanges={handleApplyColumnCustomization}
+          editMode={false}
+        />
+      )}
+
+      {/* Route Optimization Modal */}
+      {previewMode && (
+        <RouteOptimizationModal
+          open={optimizationModalOpen}
+          onOpenChange={setOptimizationModalOpen}
+          rows={displayRows}
+          previewMode={previewMode}
+          onApplyTempOrder={handleApplyRouteOptimization}
+        />
+      )}
     </>
   );
 }

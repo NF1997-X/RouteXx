@@ -7,7 +7,7 @@ import { LoadingOverlay } from "@/components/skeleton-loader";
 import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { PasswordPrompt } from "@/components/password-prompt";
-import { Database } from "lucide-react";
+import { Database, Info } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { calculateDistance } from "@/utils/distance";
 import type { SharedTableState, TableColumn, TableRow } from "@shared/schema";
@@ -68,6 +68,9 @@ export default function SharedTablePage() {
 
     // Filter rows (clone to avoid mutating query cache)
     let filtered = [...rows];
+    
+    // EXCLUDE inactive rows from shared tables (only show active rows)
+    filtered = filtered.filter(row => row.active !== false);
     
     // Apply delivery alternate day-based filtering
     const today = new Date().getDay(); // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
@@ -392,7 +395,7 @@ export default function SharedTablePage() {
           <div className="flex h-14 items-center justify-between text-[12px]">
             <div className="flex items-center space-x-2">
               <div className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden">
+                <div className="flex h-8 w-8 items-center justify-center rounded-none overflow-hidden">
                   <img 
                     src="/assets/Logofm.png" 
                     alt="Logo" 
@@ -411,18 +414,101 @@ export default function SharedTablePage() {
         </div>
       </nav>
 
-      <main className="pt-[56px]">
+      {/* Read-Only Banner - Show when not in edit mode */}
+      {!editMode && (
+        <div className="fixed top-[56px] left-0 right-0 z-40 bg-gradient-to-r from-blue-500/90 via-blue-600/90 to-blue-700/90 dark:from-blue-600/90 dark:via-blue-700/90 dark:to-blue-800/90 backdrop-blur-sm border-b-2 border-blue-400/50 dark:border-blue-500/50 shadow-lg">
+          <div className="container mx-auto px-4 py-2.5">
+            <div className="flex items-center justify-center gap-2 text-white">
+              <Info className="h-4 w-4 flex-shrink-0 blink-slow" />
+              <span className="text-xs font-medium blink-slow">
+                📖 This is a read-only view. Enable Edit Mode to make changes.
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <main className={editMode ? "pt-[56px]" : "pt-[96px]"}>
         <div className="container mx-auto px-4 py-8">
-          {/* Route Filter Info Banner */}
-          {routeFilters.length > 0 && (
-            <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg border-2 border-transparent">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-blue-900 dark:text-blue-100">
-                  📍 Showing Routes: {routeFilters.join(', ')}
+          {/* Info Banner - Routes, Delivery OFF, Expired Colors */}
+          <div className="mb-4 p-4 bg-gradient-to-r from-blue-50/80 to-cyan-50/80 dark:from-blue-900/30 dark:to-cyan-900/30 rounded-lg border-2 border-blue-200/50 dark:border-blue-700/50 backdrop-blur-sm shadow-md">
+            <div className="flex flex-col gap-3 text-xs">
+              {/* Routes Display */}
+              {routeFilters.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-blue-900 dark:text-blue-100">
+                    📍 Showing Routes:
+                  </span>
+                  <span className="text-blue-800 dark:text-blue-200 font-medium">
+                    {(() => {
+                      // Route name mapping
+                      const routeNameMap: Record<string, string> = {
+                        'SL 1': 'SL 1 - AM - 3AVS01',
+                        'SL 2': 'SL 2 - AM - 3AVS02',
+                        'KL 3': 'KL 3 - AM - 3AVK03',
+                        'KL 4': 'KL 4 - AM - 3AVK04',
+                        'SL 3': 'SL 3 - PM - 3PVS01',
+                        'KL 6': 'KL 6 - PM - 3PVK03',
+                        'KL 7': 'KL 7 - PM - 3PVK04'
+                      };
+                      
+                      return routeFilters.map(route => routeNameMap[route] || route).join(', ');
+                    })()}
+                  </span>
+                </div>
+              )}
+              
+              {/* Delivery OFF Status */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-semibold text-blue-900 dark:text-blue-100">
+                  🗓️ Delivery OFF:
+                </span>
+                <span className="text-blue-800 dark:text-blue-200 font-medium">
+                  {(() => {
+                    const today = new Date().getDay(); // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+                    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                    const isAlt1Day = [1, 3, 5, 0].includes(today); // Mon, Wed, Fri, Sun
+                    const isAlt2Day = [2, 4, 6].includes(today); // Tue, Thu, Sat
+                    
+                    if (isAlt1Day) {
+                      return `Alt 2 (${dayNames[today]})`;
+                    } else if (isAlt2Day) {
+                      return `Alt 1 (${dayNames[today]})`;
+                    }
+                    return dayNames[today];
+                  })()}
                 </span>
               </div>
+              
+              {/* Expired Color Indicator */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-semibold text-blue-900 dark:text-blue-100 flex-shrink-0">
+                  🚫 Expired Color:
+                </span>
+                <div className="flex items-center gap-1.5">
+                  {(() => {
+                    const today = new Date().getDay(); // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+                    const dayColors = [
+                      { name: 'Purple', bg: 'bg-purple-400', border: 'border-purple-600' },
+                      { name: 'Pink', bg: 'bg-pink-400', border: 'border-pink-600' },
+                      { name: 'Yellow', bg: 'bg-yellow-400', border: 'border-yellow-600' },
+                      { name: 'Blue', bg: 'bg-blue-400', border: 'border-blue-600' },
+                      { name: 'Orange', bg: 'bg-orange-400', border: 'border-orange-600' },
+                      { name: 'Brown', bg: 'bg-amber-700', border: 'border-amber-900' },
+                      { name: 'Green', bg: 'bg-green-400', border: 'border-green-600' }
+                    ];
+                    const todayColor = dayColors[today];
+                    return (
+                      <>
+                        <div className={`w-3 h-3 rounded-full ${todayColor.bg} border ${todayColor.border} shadow-sm`}></div>
+                        <span className="text-blue-800 dark:text-blue-200 font-medium">{todayColor.name}</span>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
             </div>
-          )}
+          </div>
           
           {/* Data Table with all interactive features enabled */}
           <DataTable

@@ -12,25 +12,47 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Share2, Trash2, Copy, Check, Home, Edit, ArrowLeft } from "lucide-react";
+import { Plus, Share2, Trash2, Copy, Check, Home, Edit, ArrowLeft, MoreVertical, Eye, Filter, PlayCircle, ChevronDown, ChevronUp } from "lucide-react";
 import type { TableRow, CustomTable } from "@shared/schema";
 import { Footer } from "@/components/footer";
 import { LoadingOverlay } from "@/components/skeleton-loader";
 import { useTheme } from "@/components/theme-provider";
 import { useLocation } from "wouter";
+import { Switch } from "@/components/ui/switch";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 export default function CustomTableList() {
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingTable, setEditingTable] = useState<CustomTable | null>(null);
+  const [tableToDelete, setTableToDelete] = useState<CustomTable | null>(null);
   const [tableName, setTableName] = useState("");
   const [tableDescription, setTableDescription] = useState("");
   const [shareUrl, setShareUrl] = useState("");
   const [copiedId, setCopiedId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [deliveryFilter, setDeliveryFilter] = useState<string[]>([]);
+  const [previewModes, setPreviewModes] = useState<Map<string, boolean>>(new Map());
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { theme, toggleTheme } = useTheme();
@@ -46,20 +68,27 @@ export default function CustomTableList() {
     queryKey: ["/api/custom-tables"],
   });
 
-  // Filter table rows based on search and delivery filter
-  const filteredRows = tableRows.filter((row) => {
-    // Search filter
-    const matchesSearch = searchTerm === "" || 
-      Object.values(row).some(value => 
-        String(value).toLowerCase().includes(searchTerm.toLowerCase())
-      );
+  // Filter and sort table rows based on search, delivery filter, and code
+  const filteredRows = tableRows
+    .filter((row) => {
+      // Search filter
+      const matchesSearch = searchTerm === "" || 
+        Object.values(row).some(value => 
+          String(value).toLowerCase().includes(searchTerm.toLowerCase())
+        );
 
-    // Delivery filter (hide selected delivery types)
-    const matchesDelivery = deliveryFilter.length === 0 || 
-      !deliveryFilter.includes(row.delivery);
+      // Delivery filter (hide selected delivery types)
+      const matchesDelivery = deliveryFilter.length === 0 || 
+        !deliveryFilter.includes(row.delivery);
 
-    return matchesSearch && matchesDelivery;
-  });
+      return matchesSearch && matchesDelivery;
+    })
+    .sort((a, b) => {
+      // Sort by code column (less to greater / ascending)
+      const codeA = a.code || "";
+      const codeB = b.code || "";
+      return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+    });
 
   // Get unique delivery types
   const deliveryOptions = Array.from(
@@ -139,6 +168,8 @@ export default function CustomTableList() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/custom-tables"] });
+      setDeleteDialogOpen(false);
+      setTableToDelete(null);
       toast({
         title: "Table deleted",
         description: "Custom table has been deleted.",
@@ -152,6 +183,18 @@ export default function CustomTableList() {
       });
     },
   });
+
+  const handleDelete = (table: CustomTable) => {
+    setTableToDelete(table);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = (event: React.MouseEvent) => {
+    event.preventDefault();
+    if (tableToDelete) {
+      deleteTableMutation.mutate(tableToDelete.id);
+    }
+  };
 
   const toggleRowSelection = (rowId: string) => {
     const newSelection = new Set(selectedRows);
@@ -267,7 +310,7 @@ export default function CustomTableList() {
             {/* Logo/Brand */}
             <div className="flex items-center space-x-2">
               <div className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg overflow-hidden">
+                <div className="flex h-9 w-9 items-center justify-center rounded-none overflow-hidden">
                   <img 
                     src="/assets/Logofm.png" 
                     alt="Logo" 
@@ -276,7 +319,7 @@ export default function CustomTableList() {
                 </div>
                 <div className="flex flex-col gap-0 leading-tight">
                   <span className="font-bold text-slate-600 dark:text-slate-300 leading-none" style={{ fontSize: '12px' }}>Custom Tables</span>
-                  <span className="text-slate-400 dark:text-slate-500 leading-none my-0.5" style={{ fontSize: '9px' }}>Create table , select list and share </span>
+                  <span className="text-slate-600 dark:text-slate-400 font-medium leading-none my-0.5" style={{ fontSize: '9px' }}>Select & share tables</span>
                 </div>
               </div>
             </div>
@@ -286,7 +329,7 @@ export default function CustomTableList() {
               onClick={() => setLocation("/")}
               variant="outline"
               size="sm"
-              className="btn-glass w-8 h-8 md:w-auto md:h-9 p-0 md:px-3 pagination-button group transition-all duration-300 ease-out hover:scale-110 hover:shadow-lg hover:shadow-blue-500/20 active:scale-95 active:shadow-none"
+              className="bg-transparent border-transparent w-8 h-8 md:w-auto md:h-9 p-0 md:px-3 pagination-button group transition-all duration-300 ease-out hover:scale-110 hover:shadow-lg hover:shadow-blue-500/20 active:scale-95 active:shadow-none"
               title="Back"
             >
               <ArrowLeft className="w-4 h-4 text-blue-600 dark:text-blue-400 transition-all duration-300" />
@@ -330,9 +373,60 @@ export default function CustomTableList() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="max-w-sm bg-white dark:bg-black/20 border-gray-300 dark:border-white/20 text-sm h-8 shadow-sm"
               />
-              <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center px-3 bg-white dark:bg-black/20 rounded-md border border-gray-300 dark:border-white/20 shadow-sm font-medium">
-                {selectedRows.size} selected
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 bg-white dark:bg-black/20 border-gray-300 dark:border-white/20"
+                  >
+                    <Filter className="h-4 w-4 mr-2" />
+                    <span className="text-xs">Filter</span>
+                    {deliveryFilter.length > 0 && (
+                      <span className="ml-2 rounded-full bg-blue-500 text-white text-[10px] px-1.5 py-0.5">
+                        {deliveryFilter.length}
+                      </span>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <div className="px-2 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    Hide Delivery Types
+                  </div>
+                  <DropdownMenuSeparator />
+                  {deliveryOptions.map((delivery) => (
+                    <DropdownMenuItem
+                      key={delivery}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setDeliveryFilter((prev) =>
+                          prev.includes(delivery)
+                            ? prev.filter((d) => d !== delivery)
+                            : [...prev, delivery]
+                        );
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <Checkbox
+                        checked={deliveryFilter.includes(delivery)}
+                        className="mr-2"
+                      />
+                      <span>{delivery}</span>
+                    </DropdownMenuItem>
+                  ))}
+                  {deliveryFilter.length > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => setDeliveryFilter([])}
+                        className="cursor-pointer text-red-600"
+                      >
+                        Clear Filters
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -341,7 +435,7 @@ export default function CustomTableList() {
             <table className="w-full min-w-[600px]">
               <thead className="bg-gradient-to-r from-slate-200 to-slate-300 dark:from-slate-800/50 dark:to-slate-900/50 sticky top-0 z-10">
                 <tr className="border-b-2 border-gray-300 dark:border-white/10">
-                  <th className="px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">
+                  <th className="px-3 py-2 text-center text-xs font-semibold whitespace-nowrap">
                     <Checkbox
                       checked={selectedRows.size === filteredRows.length && filteredRows.length > 0}
                       onCheckedChange={(checked) => {
@@ -353,10 +447,10 @@ export default function CustomTableList() {
                       }}
                     />
                   </th>
-                  <th className="px-2 py-2 text-left text-xs font-semibold whitespace-nowrap">Route</th>
-                  <th className="px-2 py-2 text-left text-xs font-semibold whitespace-nowrap">Code</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold whitespace-nowrap">Location</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold whitespace-nowrap">Delivery</th>
+                  <th className="px-2 py-2 text-center text-xs font-semibold whitespace-nowrap">Route</th>
+                  <th className="px-2 py-2 text-center text-xs font-semibold whitespace-nowrap">Code</th>
+                  <th className="px-4 py-2 text-center text-xs font-semibold whitespace-nowrap">Location</th>
+                  <th className="px-4 py-2 text-center text-xs font-semibold whitespace-nowrap">Delivery</th>
                 </tr>
               </thead>
               <tbody>
@@ -377,23 +471,23 @@ export default function CustomTableList() {
                         }`}
                         onClick={() => toggleRowSelection(row.id)}
                       >
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2 text-center">
                           <Checkbox
                             checked={isSelected}
                             onCheckedChange={() => toggleRowSelection(row.id)}
                             onClick={(e) => e.stopPropagation()}
                           />
                         </td>
-                        <td className={`px-2 py-2 text-xs whitespace-nowrap ${isSelected ? "font-semibold" : ""}`}>
+                        <td className={`px-2 py-2 text-xs text-center whitespace-nowrap ${isSelected ? "font-semibold" : ""}`}>
                           {row.route}
                         </td>
-                        <td className={`px-2 py-2 text-xs whitespace-nowrap ${isSelected ? "font-semibold" : ""}`}>
+                        <td className={`px-2 py-2 text-xs text-center whitespace-nowrap ${isSelected ? "font-semibold" : ""}`}>
                           {row.code}
                         </td>
-                        <td className={`px-4 py-2 text-xs whitespace-nowrap ${isSelected ? "font-semibold" : ""}`}>
+                        <td className={`px-4 py-2 text-xs text-center whitespace-nowrap ${isSelected ? "font-semibold" : ""}`}>
                           {row.location}
                         </td>
-                        <td className={`px-4 py-2 text-xs whitespace-nowrap ${isSelected ? "font-semibold" : ""}`}>
+                        <td className={`px-4 py-2 text-xs text-center whitespace-nowrap ${isSelected ? "font-semibold" : ""}`}>
                           {row.delivery}
                         </td>
                       </tr>
@@ -421,63 +515,135 @@ export default function CustomTableList() {
             </p>
           ) : (
             <div className="space-y-4">
-              {customTables.map((table) => (
-                <div
-                  key={table.id}
-                  className="custom-table-card flex items-center justify-between p-4 bg-transparent rounded-xl border border-gray-300 dark:border-gray-800/40 hover:bg-gray-50 dark:hover:bg-white/5"
-                >
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-[12px]">{table.name}</h3>
-                    {table.description && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{table.description}</p>
-                    )}
-                    <p className="text-gray-500 dark:text-gray-500 mt-1" style={{ fontSize: '10px' }}>
-                      Created {new Date(table.createdAt).toLocaleDateString()}
-                    </p>
+              {customTables.map((table) => {
+                const isPreviewMode = previewModes.get(table.id) || false;
+                const isExpanded = expandedCards.has(table.id);
+                return (
+                  <div
+                    key={table.id}
+                    className="custom-table-card p-4 bg-transparent rounded-xl border border-transparent hover:bg-gray-50 dark:hover:bg-white/5"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-gray-900 dark:text-white text-[12px]">{table.name}</h3>
+                          <button
+                            onClick={() => {
+                              const newExpanded = new Set(expandedCards);
+                              if (isExpanded) {
+                                newExpanded.delete(table.id);
+                              } else {
+                                newExpanded.add(table.id);
+                              }
+                              setExpandedCards(newExpanded);
+                            }}
+                            className="p-1 hover:bg-gray-200 dark:hover:bg-white/10 rounded transition-colors"
+                            aria-label={isExpanded ? "Collapse details" : "Expand details"}
+                          >
+                            {isExpanded ? (
+                              <ChevronUp className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+                            ) : (
+                              <ChevronDown className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+                            )}
+                          </button>
+                        </div>
+                        {isExpanded && (
+                          <div className="mt-2 space-y-1">
+                            {table.description && (
+                              <p className="text-sm text-gray-600 dark:text-gray-400">{table.description}</p>
+                            )}
+                            <p className="text-gray-500 dark:text-gray-500" style={{ fontSize: '10px' }}>
+                              Created {new Date(table.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="bg-transparent border-transparent hover:bg-gray-100 dark:hover:bg-white/10"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          <div className="px-2 py-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                {isPreviewMode ? (
+                                  <PlayCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                ) : (
+                                  <Eye className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                                )}
+                                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                  {isPreviewMode ? "Preview Mode" : "Read-Only"}
+                                </span>
+                              </div>
+                              <Switch
+                                checked={isPreviewMode}
+                                onCheckedChange={(checked) => {
+                                  const newModes = new Map(previewModes);
+                                  newModes.set(table.id, checked);
+                                  setPreviewModes(newModes);
+                                }}
+                                className="data-[state=checked]:bg-green-500"
+                              />
+                            </div>
+                          </div>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => {
+                              const url = isPreviewMode 
+                                ? `/custom/${table.shareId}?preview=true`
+                                : `/custom/${table.shareId}`;
+                              window.open(url, "_blank");
+                            }}
+                            className="cursor-pointer"
+                          >
+                            <Eye className="h-4 w-4 mr-2 text-blue-500" />
+                            <span>View Table</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => copyShareLink(table)}
+                            className="cursor-pointer"
+                          >
+                            {copiedId === table.id ? (
+                              <>
+                                <Check className="h-4 w-4 mr-2 text-green-500" />
+                                <span>Link Copied!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Share2 className="h-4 w-4 mr-2 text-blue-500" />
+                                <span>Copy Link</span>
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleEditTable(table)}
+                            className="cursor-pointer"
+                          >
+                            <Edit className="h-4 w-4 mr-2 text-green-600" />
+                            <span>Edit Table</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleDelete(table)}
+                            className="cursor-pointer text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            <span>Delete Table</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => copyShareLink(table)}
-                      size="sm"
-                      variant="outline"
-                      className="bg-transparent border-transparent hover:bg-blue-500/10"
-                      title="Copy share link"
-                    >
-                      {copiedId === table.id ? (
-                        <Check className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <Share2 className="h-4 w-4" />
-                      )}
-                    </Button>
-                    <Button
-                      onClick={() => window.open(`/custom/${table.shareId}`, "_blank")}
-                      size="sm"
-                      variant="outline"
-                      className="bg-transparent border-transparent hover:bg-blue-500/10"
-                    >
-                      View
-                    </Button>
-                    <Button
-                      onClick={() => handleEditTable(table)}
-                      size="sm"
-                      variant="outline"
-                      className="bg-transparent border-transparent hover:bg-green-500/10 text-green-600"
-                      title="Edit locations"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      onClick={() => deleteTableMutation.mutate(table.id)}
-                      size="sm"
-                      variant="outline"
-                      className="bg-transparent border-transparent hover:bg-red-500/10 text-red-500"
-                      title="Delete table"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -648,6 +814,43 @@ export default function CustomTableList() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
+        setDeleteDialogOpen(open);
+        if (!open) {
+          setTableToDelete(null);
+        }
+      }}>
+        <AlertDialogContent className="bg-white/70 dark:bg-black/30 backdrop-blur-2xl border-2 border-gray-200/60 dark:border-white/10 shadow-[0_20px_60px_0_rgba(0,0,0,0.25)] rounded-[2rem]">
+          <div 
+            className="absolute inset-0 -z-10 rounded-[2rem] bg-gradient-to-br from-white/70 via-white/50 to-white/60 dark:from-black/50 dark:via-black/30 dark:to-black/40 border-0 shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),inset_0_-1px_1px_rgba(0,0,0,0.1)]" 
+            style={{
+              backdropFilter: 'blur(40px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+            }}
+          >
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 dark:via-white/20 to-transparent" />
+            <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-tr from-red-500/5 via-transparent to-orange-500/5 dark:from-red-400/10 dark:via-transparent dark:to-orange-400/10" />
+          </div>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Custom Table</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{tableToDelete?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteTableMutation.isPending}
+            >
+              {deleteTableMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
         </div>
       </main>
       <Footer />

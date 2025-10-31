@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   BookOpen, 
-  Home, 
+  ArrowLeft, 
   Table2, 
   Edit3, 
   Route, 
@@ -30,7 +30,7 @@ export default function HelpPage() {
             {/* Logo/Brand */}
             <div className="flex items-center space-x-2">
               <div className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg overflow-hidden">
+                <div className="flex h-9 w-9 items-center justify-center rounded-none overflow-hidden">
                   <img 
                     src="/assets/Logofm.png" 
                     alt="Logo" 
@@ -50,9 +50,14 @@ export default function HelpPage() {
 
             {/* Back Button */}
             <Link href="/">
-              <Button variant="outline" size="sm" className="gap-2 h-9">
-                <Home className="h-4 w-4" />
-                <span className="hidden sm:inline">Back</span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="bg-transparent border-transparent w-8 h-8 md:w-auto md:h-9 p-0 md:px-3 pagination-button group transition-all duration-300 ease-out hover:scale-110 hover:shadow-lg hover:shadow-blue-500/20 active:scale-95 active:shadow-none"
+                title="Back"
+              >
+                <ArrowLeft className="w-4 h-4 text-blue-600 dark:text-blue-400 transition-all duration-300" />
+                <span className="hidden md:inline ml-2 text-xs transition-all duration-300">Back</span>
               </Button>
             </Link>
           </div>
@@ -61,14 +66,8 @@ export default function HelpPage() {
 
       {/* Content with padding for fixed header */}
       <div className="pt-16 pb-0 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Card className="bg-white/70 dark:bg-slate-900/50 border-slate-300 dark:border-slate-800 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-slate-800 dark:text-slate-100 flex items-center gap-2">
-              <Database className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              Welcome to the Route Management System
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card className="mt-6 bg-white/70 dark:bg-slate-900/50 border-slate-300 dark:border-slate-800 backdrop-blur-sm">
+          <CardContent className="mt-6">
             <ScrollArea className="h-[calc(100vh-200px)] pr-4">
               <div className="space-y-6 text-slate-700 dark:text-slate-300 leading-relaxed text-sm">
                 
