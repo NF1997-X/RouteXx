@@ -35,9 +35,17 @@ Preferred communication style: Simple, everyday language.
 
 ## UI/UX & Features
 - **Design**: Premium UI components, deep black dark theme, gradient backgrounds, blue accents.
-- **Branding**: FamilyMart logo (FamilyMart.png) with transparent background used across app: navigation header, shared table view, loading launcher screen with animated orbital effects, and data loading overlay with rotating rings.
+- **Branding**: FamilyMart logo (Logofm.png/FamilyMart.png) with square shape (rounded-none) used consistently across all pages: navigation header (main table), custom table list, help page, custom table view, shared table view, loading launcher screen with animated orbital effects, and data loading overlay with rotating rings.
 - **Loading Screens**: Logo appears instantly; loading progress animations take 5 seconds with animated progress bar (0-100%), dynamic status messages (Initializing → Loading data → Processing → Almost there → Finalizing → Complete), and random rotating tips (10 helpful feature hints that change every 800ms) for optimal user experience.
-- **Navigation**: Streamlined single dropdown menu (grid icon) consolidates all navigation options (Saved Links, Theme Toggle, Help, Edit Mode controls); saved share links auto-refresh list immediately after saving.
+- **Navigation**: Streamlined single dropdown menu (grid icon) consolidates all navigation options (Saved Links, Custom Tables, Theme Toggle, Help, Edit Mode controls); saved share links auto-refresh list immediately after saving.
+- **Quick Links**: Customizable quick access links in menu - users can edit URLs for "Share Link Page" and "Custom Page" via "Edit Quick Links" dialog; supports both internal paths (/share/abc) and external URLs (https://example.com); URLs stored in localStorage with validation.
+- **Route Flags**: Active Filters section displays state/territory flags for regional routes:
+  - 🏴 **Selangor Flag** (selangor-flag.png) appears for all SL routes (SL 1, SL 2, SL 3, etc.)
+  - 🏴 **Federal Territories Flag** (kl-flag.png) appears for all KL routes (KL 1, KL 2, KL 3, etc.)
+  - Flag icons replace standard filter icon in active filter chips with proper spacing (mr-1.5)
+  - Flags dimensions: 16px × 8px (w-4 h-2) with object-cover for aspect ratio
+  - Other routes use standard filter icon (🔍)
+- **Saved Links**: Share links are auto-generated one-time when first created (both share links and custom tables); saved links modal provides Copy Link, Open Link (new tab), Edit Remark, and Delete actions.
 - **Table Management**: Drag-and-drop rows/columns, editable "No" column for sorting, per-user layout preferences.
 - **Button UX**: Clean opacity-based feedback for add image button (no loading spinner), maintaining disabled state protection during mutations.
 - **Data Types**: Support for text, numbers, currency, images, and videos.
