@@ -2,8 +2,8 @@ import type { TableRow } from "@shared/schema";
 
 // Default QL Kitchen location
 const QL_KITCHEN_LOCATION = {
-  latitude: 3.0738,
-  longitude: 101.5183,
+  latitude: 3.06955000,
+  longitude: 101.54691790,
 };
 
 // Constants for calculations

@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
+import type { Server } from "http";
 import { storage } from "./storage";
 import { insertTableRowSchema, insertTableColumnSchema, insertRouteOptimizationSchema, insertLayoutPreferencesSchema, insertPageSchema, insertSharedTableStateSchema, insertSavedShareLinkSchema, insertCustomTableSchema, insertCustomTableRowSchema, type RouteOptimizationRequest } from "@shared/schema";
 import { z } from "zod";
@@ -9,7 +9,7 @@ import { calculateTollPrice, calculateRoutesForDestinations } from "./openroutes
 // UUID validation schema
 const uuidSchema = z.string().uuid();
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express, server: Server): Promise<void> {
   // Table rows routes
   app.get("/api/table-rows", async (req, res) => {
     try {
@@ -1081,6 +1081,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
+  // Routes registered successfully - server is passed as parameter
 }

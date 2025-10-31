@@ -2,8 +2,8 @@ import type { TableRow } from "@shared/schema";
 
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_API_KEY;
 const QL_KITCHEN_LOCATION = {
-  latitude: 3.0738,
-  longitude: 101.5183,
+  latitude: 3.06955000,
+  longitude: 101.54691790,
 };
 
 interface MoneyObject {

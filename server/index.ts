@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import { createServer } from "http";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -20,7 +21,6 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
   
   // Cache control headers to prevent stale content
   res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -71,13 +71,20 @@ const port = parseInt(process.env.PORT || '5000', 10);
 // Graceful error handling for async initialization
 (async () => {
   try {
-    // Register routes (returns HTTP server)
-    const server = await registerRoutes(app);
+    // Create HTTP server FIRST (without blocking on route registration)
+    const server = createServer(app);
 
-    // Start listening IMMEDIATELY after routes are registered
-    // This ensures health check responds quickly
+    // Set startup timeout to prevent indefinite hanging
+    const startupTimeout = setTimeout(() => {
+      log('Server startup timeout - taking too long to initialize', 'error');
+      process.exit(1);
+    }, 30000); // 30 second timeout
+
+    // Start listening IMMEDIATELY so health checks can respond
+    // This happens BEFORE route registration to prevent database blocking
     await new Promise<void>((resolve, reject) => {
       server.on('error', (error: NodeJS.ErrnoException) => {
+        clearTimeout(startupTimeout);
         if (error.code === 'EADDRINUSE') {
           log(`Port ${port} is already in use`, "error");
           reject(error);
@@ -98,6 +105,14 @@ const port = parseInt(process.env.PORT || '5000', 10);
         resolve();
       });
     });
+
+    // Clear startup timeout once server is listening
+    clearTimeout(startupTimeout);
+
+    // Register routes AFTER server is listening (non-blocking for health checks)
+    // This prevents database initialization from blocking health check responses
+    log('Registering routes and initializing database connections...');
+    await registerRoutes(app, server);
 
     // Setup Vite AFTER server is listening (non-blocking)
     if (app.get("env") === "development") {

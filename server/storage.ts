@@ -1231,22 +1231,28 @@ export class DatabaseStorage implements IStorage {
           const row = defaultRows[i];
           // Give QL Kitchen special sortOrder to always appear at top
           const sortOrder = row.location === "QL Kitchen" ? -1 : i - 1;
-          await db.insert(tableRows).values({
-            no: row.no,
-            route: row.route,
-            code: row.code,
-            location: row.location,
-            delivery: row.delivery,
-            info: row.info,
-            tngSite: row.tngSite,
-            tngRoute: row.tngRoute,
-            destination: row.destination,
-            latitude: row.latitude,
-            longitude: row.longitude,
-            images: row.images,
-            qrCode: row.qrCode,
-            sortOrder: sortOrder,
-          });
+          try {
+            await db.insert(tableRows).values({
+              no: row.no,
+              route: row.route,
+              code: row.code,
+              location: row.location,
+              delivery: row.delivery,
+              info: row.info,
+              tngSite: row.tngSite,
+              tngRoute: row.tngRoute,
+              destination: row.destination,
+              latitude: row.latitude,
+              longitude: row.longitude,
+              images: row.images,
+              qrCode: row.qrCode,
+              sortOrder: sortOrder,
+            });
+          } catch (insertError: any) {
+            if (insertError?.code !== '23505') {
+              throw insertError;
+            }
+          }
         }
       }
     } catch (error) {
