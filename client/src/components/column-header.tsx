@@ -18,7 +18,7 @@ export function ColumnHeader({ column, dragHandleProps, onDelete, isAuthenticate
   return (
     <div className="flex items-center justify-center w-[98%] mx-auto relative">
       <div {...dragHandleProps} className="text-center">
-        <span className="block bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent font-medium" style={{fontSize: '11px'}}>{column.name}</span>
+        <span className="block bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent font-medium" style={{fontSize: '10px'}}>{column.name}</span>
       </div>
       {!isCoreColumn && (
         <div className="absolute right-0 flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity">

@@ -63,6 +63,11 @@ const getRouteColor = (code?: string): string => {
 // Cached icons for better performance - avoid recreating on each render
 const iconCache = new Map<string, L.Icon>();
 
+// Function to clear icon cache (useful for debugging)
+export const clearMapIconCache = () => {
+  iconCache.clear();
+};
+
 // Create custom colored marker from hex color using SVG
 const createCustomColorIcon = (hexColor: string, isCurrent: boolean = false) => {
   const cacheKey = `custom-${hexColor}-${isCurrent}`;
@@ -137,20 +142,9 @@ function MapResizer({
     if (!map || !map.getContainer()) return;
     
     try {
-      map.setView(center, zoom, { animate: true, duration: 0.5 });
-      
-      // Optimized delay for proper rendering
-      const timeout = setTimeout(() => {
-        try {
-          if (map?.getContainer()?.parentNode) {
-            map.invalidateSize({ animate: false });
-          }
-        } catch (sizeError: any) {
-          // Silently handle sizing errors during cleanup
-        }
-      }, 100);
-
-      return () => clearTimeout(timeout);
+      // Update view whenever center or zoom changes, no animation for performance
+      map.setView(center, zoom, { animate: false });
+      map.invalidateSize({ animate: false });
     } catch (error) {
       // Silently handle map errors
     }
@@ -172,7 +166,7 @@ function BackToCurrentButton({
       map.setView(
         [currentLocation.latitude, currentLocation.longitude], 
         15, 
-        { animate: true, duration: 0.8 }
+        { animate: false }
       );
     }
   }, [currentLocation, map]);
@@ -245,7 +239,7 @@ export const MiniMap = memo(function MiniMap({
         : locations.filter(l => l.isCurrent).length 
           ? locations.filter(l => l.isCurrent) 
           : [locations[0]];
-    }, [isFullscreen, selectedRoutes]);
+    }, [isFullscreen, selectedRoutes, locations]);
 
     // Find current location for "back to current" button
     const currentLocation = useMemo(() => 
@@ -253,28 +247,22 @@ export const MiniMap = memo(function MiniMap({
       [locations]
     );
 
-    // Calculate center and zoom from rendered locations - memoized for performance
+    // Calculate center from rendered locations - disable auto-centering for user control
     const center = useMemo((): [number, number] => {
       if (renderedLocations.length === 0) return [3.139003, 101.686855];
-      const avgLat = renderedLocations.reduce((sum, loc) => sum + loc.latitude, 0) / renderedLocations.length;
-      const avgLng = renderedLocations.reduce((sum, loc) => sum + loc.longitude, 0) / renderedLocations.length;
-      return [avgLat, avgLng];
+      
+      // If there's a current location, center on it
+      const current = renderedLocations.find(loc => loc.isCurrent);
+      if (current) {
+        return [current.latitude, current.longitude];
+      }
+      
+      // Otherwise center on first location
+      return [renderedLocations[0].latitude, renderedLocations[0].longitude];
     }, [renderedLocations]);
 
-    const zoom = useMemo((): number => {
-      if (renderedLocations.length <= 1) return 15;
-      const lats = renderedLocations.map((loc) => loc.latitude);
-      const lngs = renderedLocations.map((loc) => loc.longitude);
-      const latRange = Math.max(...lats) - Math.min(...lats);
-      const lngRange = Math.max(...lngs) - Math.min(...lngs);
-      const maxRange = Math.max(latRange, lngRange);
-      if (maxRange > 5) return 8;
-      if (maxRange > 2) return 10;
-      if (maxRange > 1) return 12;
-      if (maxRange > 0.5) return 13;
-      if (maxRange > 0.1) return 14;
-      return 15;
-    }, [renderedLocations]);
+    // Fixed zoom level - no auto-zoom to prevent map jumping
+    const zoom = 13;
 
     return (
     <MapContainer

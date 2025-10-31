@@ -258,22 +258,37 @@ export function InfoModal({ info, rowId, code, route, location, latitude, longit
         </Button>
       </DialogTrigger>
       <DialogContent 
-        className="max-w-lg overflow-hidden flex flex-col bg-white/70 dark:bg-black/30 backdrop-blur-2xl border-2 border-gray-200/60 dark:border-white/10 shadow-[0_20px_60px_0_rgba(0,0,0,0.25)] rounded-3xl transition-smooth data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-90 data-[state=open]:zoom-in-95 duration-300 ease-out"
+        className="max-w-lg overflow-hidden flex flex-col bg-white/50 dark:bg-black/20 backdrop-blur-3xl border-2 border-white/30 dark:border-white/10 shadow-[0_25px_80px_0_rgba(0,0,0,0.3)] rounded-3xl transition-smooth data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-90 data-[state=open]:zoom-in-95 duration-300 ease-out"
         style={{
           maxHeight: 'min(90vh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 40px))',
           touchAction: 'pan-y',
         }}
       >
-        {/* iOS Frosted Glass Layer */}
+        {/* Enhanced Multi-Layer Glassmorphism */}
         <div 
-          className="absolute inset-0 -z-10 rounded-3xl bg-gradient-to-br from-white/60 via-white/40 to-white/50 dark:from-black/40 dark:via-black/20 dark:to-black/30 border-0 shadow-inner" 
-          style={{
-            backdropFilter: 'blur(40px)',
-            WebkitBackdropFilter: 'blur(40px)',
-          }}
-        />
+          className="absolute inset-0 -z-10 rounded-3xl overflow-hidden"
+        >
+          {/* Base glass layer */}
+          <div 
+            className="absolute inset-0 bg-gradient-to-br from-white/70 via-white/50 to-white/60 dark:from-black/50 dark:via-black/30 dark:to-black/40"
+            style={{
+              backdropFilter: 'blur(60px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(60px) saturate(180%)',
+            }}
+          />
+          
+          {/* Rim light effect */}
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 dark:via-white/30 to-transparent" />
+          <div className="absolute inset-y-0 left-0 w-px bg-gradient-to-b from-transparent via-white/40 dark:via-white/20 to-transparent" />
+          
+          {/* Subtle color overlay */}
+          <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/5 via-transparent to-cyan-500/5 dark:from-blue-400/10 dark:via-transparent dark:to-cyan-400/10" />
+          
+          {/* Inner shadow for depth */}
+          <div className="absolute inset-0 shadow-[inset_0_2px_4px_0_rgba(0,0,0,0.05)] dark:shadow-[inset_0_2px_4px_0_rgba(255,255,255,0.05)]" />
+        </div>
         <DialogHeader 
-          className="pb-6 border-b border-blue-900 dark:border-cyan-400/50 flex-shrink-0"
+          className="pb-3 border-b border-blue-900 dark:border-cyan-400/50 flex-shrink-0"
           style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}
         >
           <DialogTitle className="font-semibold text-center text-slate-900 dark:text-slate-400" style={{fontSize: '10px'}}>
@@ -293,7 +308,10 @@ export function InfoModal({ info, rowId, code, route, location, latitude, longit
         >
           {/* Mini Map Section */}
           {latitude && longitude && !isNaN(parseFloat(latitude)) && !isNaN(parseFloat(longitude)) && (
-            <div className="bg-transparent backdrop-blur-sm rounded-xl p-4 space-y-3 shadow-sm">
+            <div className="relative bg-white/40 dark:bg-black/20 backdrop-blur-xl rounded-2xl p-5 space-y-3 shadow-lg border border-white/50 dark:border-white/10 overflow-hidden">
+              {/* Glass effect overlay */}
+              <div className="absolute inset-0 -z-10 bg-gradient-to-br from-white/60 via-white/30 to-transparent dark:from-white/5 dark:via-transparent dark:to-transparent" />
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-green-400/40 to-transparent" />
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-400 dark:bg-green-300 rounded-full animate-pulse"></div>
                 <h4 className="font-semibold text-green-500 dark:text-green-300" style={{fontSize: '10px'}}>🗺️ Location Map</h4>
@@ -366,7 +384,10 @@ export function InfoModal({ info, rowId, code, route, location, latitude, longit
           )}
 
           {/* Description Section */}
-          <div className="bg-transparent backdrop-blur-sm rounded-xl p-4 space-y-3 shadow-sm">
+          <div className="relative bg-white/40 dark:bg-black/20 backdrop-blur-xl rounded-2xl p-5 space-y-3 shadow-lg border border-white/50 dark:border-white/10 overflow-hidden">
+            {/* Glass effect overlay */}
+            <div className="absolute inset-0 -z-10 bg-gradient-to-br from-white/60 via-white/30 to-transparent dark:from-white/5 dark:via-transparent dark:to-transparent" />
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-purple-400/40 to-transparent" />
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-purple-500 dark:bg-purple-400 rounded-full"></div>
               <h4 className="font-semibold text-purple-600 dark:text-purple-400" style={{fontSize: '10px'}}>📝 Description</h4>
@@ -433,7 +454,10 @@ export function InfoModal({ info, rowId, code, route, location, latitude, longit
 
           {/* URL Section - Only show in edit mode */}
           {editMode && (
-            <div className="bg-transparent backdrop-blur-sm rounded-xl p-4 space-y-3 shadow-sm">
+            <div className="relative bg-white/40 dark:bg-black/20 backdrop-blur-xl rounded-2xl p-5 space-y-3 shadow-lg border border-white/50 dark:border-white/10 overflow-hidden">
+              {/* Glass effect overlay */}
+              <div className="absolute inset-0 -z-10 bg-gradient-to-br from-white/60 via-white/30 to-transparent dark:from-white/5 dark:via-transparent dark:to-transparent" />
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent" />
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-cyan-500 dark:bg-cyan-400 rounded-full"></div>
                 <h4 className="font-semibold text-cyan-600 dark:text-cyan-400" style={{fontSize: '10px'}}>🌐 Website URL</h4>
@@ -483,7 +507,10 @@ export function InfoModal({ info, rowId, code, route, location, latitude, longit
 
           {/* QR Code URL Section - Only show in edit mode */}
           {editMode && (
-            <div className="bg-transparent backdrop-blur-sm rounded-xl p-4 space-y-3 shadow-sm">
+            <div className="relative bg-white/40 dark:bg-black/20 backdrop-blur-xl rounded-2xl p-5 space-y-3 shadow-lg border border-white/50 dark:border-white/10 overflow-hidden">
+              {/* Glass effect overlay */}
+              <div className="absolute inset-0 -z-10 bg-gradient-to-br from-white/60 via-white/30 to-transparent dark:from-white/5 dark:via-transparent dark:to-transparent" />
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-purple-400/40 to-transparent" />
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-purple-500 dark:bg-purple-400 rounded-full"></div>
                 <h4 className="font-semibold text-purple-600 dark:text-purple-400" style={{fontSize: '10px'}}><QrCode className="w-4 h-4 inline mr-1" />QR Code URL</h4>
@@ -503,7 +530,10 @@ export function InfoModal({ info, rowId, code, route, location, latitude, longit
 
           {/* Location Coordinates Section - Only show in edit mode */}
           {editMode && (
-            <div className="bg-transparent backdrop-blur-sm rounded-xl p-4 space-y-3 shadow-sm">
+            <div className="relative bg-white/40 dark:bg-black/20 backdrop-blur-xl rounded-2xl p-5 space-y-3 shadow-lg border border-white/50 dark:border-white/10 overflow-hidden">
+              {/* Glass effect overlay */}
+              <div className="absolute inset-0 -z-10 bg-gradient-to-br from-white/60 via-white/30 to-transparent dark:from-white/5 dark:via-transparent dark:to-transparent" />
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-green-400/40 to-transparent" />
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 dark:bg-green-400 rounded-full"></div>
                 <h4 className="font-semibold text-green-600 dark:text-green-400" style={{fontSize: '10px'}}>📍 Coordinates</h4>
@@ -563,38 +593,36 @@ export function InfoModal({ info, rowId, code, route, location, latitude, longit
                 <p className="text-muted-foreground" style={{fontSize: '10px'}}>Custom color for map marker pin</p>
               </div>
               
-              {/* Save/Cancel Buttons - Right below coordinates */}
-              <div className="flex justify-end gap-2 pt-4 border-t border-blue-200 dark:border-blue-800/50">
+              {/* Save/Cancel Buttons - Enhanced Touch Targets */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-blue-200 dark:border-blue-800/50">
                 <Button
                   variant="ghost"
-                  size="sm"
+                  className="h-11 px-5 bg-white/60 dark:bg-black/40 border-2 border-red-300/60 dark:border-red-700/60 hover:bg-red-50 dark:hover:bg-red-900/20 hover:scale-105 active:scale-95 transition-all shadow-md backdrop-blur-sm text-red-600 hover:text-red-700"
                   onClick={() => {
                     setCurrentData(originalData);
                     setOpen(false);
                   }}
-                  className="bg-transparent border-transparent hover:bg-transparent hover:border-transparent text-red-600 hover:text-red-700"
-                  style={{fontSize: '10px'}}
+                  style={{fontSize: '11px'}}
                   data-testid="button-cancel-info"
                 >
-                  <X className="w-4 h-4 mr-1" />
+                  <X className="w-4 h-4 mr-1.5" />
                   Cancel
                 </Button>
                 <Button
-                  size="sm"
+                  className={`h-11 px-5 ${hasChanges() ? 'bg-white/60 dark:bg-black/40 border-2 border-green-300/60 dark:border-green-700/60 hover:bg-green-50 dark:hover:bg-green-900/20 text-green-600 hover:text-green-700' : 'bg-gray-200/60 dark:bg-gray-800/40 border-2 border-gray-300/60 dark:border-gray-700/60 text-gray-400 cursor-not-allowed'} hover:scale-105 active:scale-95 transition-all shadow-md backdrop-blur-sm`}
                   onClick={handleSaveClick}
                   disabled={isSaving || !hasChanges()}
-                  className={hasChanges() ? 'bg-transparent border-transparent hover:bg-transparent hover:border-transparent text-green-600 hover:text-green-700' : 'bg-transparent border-transparent text-gray-400 cursor-not-allowed'}
-                  style={{fontSize: '10px'}}
+                  style={{fontSize: '11px'}}
                   data-testid="button-save-info"
                 >
                   {isSaving ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
                       Saving...
                     </>
                   ) : (
                     <>
-                      <Save className="w-4 h-4 mr-1" />
+                      <Save className="w-4 h-4 mr-1.5" />
                       Save
                     </>
                   )}
@@ -609,31 +637,28 @@ export function InfoModal({ info, rowId, code, route, location, latitude, longit
           style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
         >
           <div className="flex flex-col gap-4 w-full">
-            {/* Action Buttons Row */}
+            {/* Action Buttons Row - Enhanced Touch Targets */}
             <div className="flex justify-between items-center w-full">
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-3 flex-wrap">
               {location !== "QL Kitchen" && (
                 <Button
                   variant="ghost"
-                  size="sm"
+                  className="h-11 w-11 p-0 bg-white/60 dark:bg-black/40 border-2 border-gray-300/60 dark:border-gray-700/60 hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105 active:scale-95 transition-all shadow-md backdrop-blur-sm"
                   onClick={handleEditClick}
-                  className="bg-transparent border-transparent hover:bg-transparent hover:border-transparent"
                   data-testid={`button-edit-${rowId}`}
                 >
-                  <ListChecks className="w-4 h-4 text-green-600" />
+                  <ListChecks className="w-5 h-5 text-green-600" />
                 </Button>
               )}
               {qrCode && (
                 <Button
                   variant="ghost"
-                  size="sm"
+                  className="h-11 w-11 p-0 bg-white/60 dark:bg-black/40 border-2 border-gray-300/60 dark:border-gray-700/60 hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105 active:scale-95 transition-all shadow-md backdrop-blur-sm disabled:opacity-50"
                   onClick={handleQrCodeClick}
                   disabled={isScanning}
-                  className="bg-transparent border-transparent hover:bg-transparent hover:border-transparent"
                   data-testid={`button-qrcode-${rowId}`}
                 >
-                  <QrCode className="w-4 h-4 text-purple-600" />
-                  {isScanning && <span className="ml-1 text-xs">Scanning...</span>}
+                  <QrCode className="w-5 h-5 text-purple-600" />
                 </Button>
               )}
               {(() => {
@@ -648,12 +673,11 @@ export function InfoModal({ info, rowId, code, route, location, latitude, longit
                 return url.trim() ? (
                   <Button
                     variant="ghost"
-                    size="sm"
+                    className="h-11 w-11 p-0 bg-white/60 dark:bg-black/40 border-2 border-gray-300/60 dark:border-gray-700/60 hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105 active:scale-95 transition-all shadow-md backdrop-blur-sm"
                     onClick={() => handleUrlClick(url)}
-                    className="bg-transparent border-transparent hover:bg-transparent hover:border-transparent"
                     data-testid={`button-open-url-${rowId}`}
                   >
-                    <ExternalLink className="w-4 h-4 text-cyan-600" />
+                    <ExternalLink className="w-5 h-5 text-cyan-600" />
                   </Button>
                 ) : null;
               })()}
@@ -661,21 +685,19 @@ export function InfoModal({ info, rowId, code, route, location, latitude, longit
                 <>
                   <Button
                     variant="ghost"
-                    size="sm"
+                    className="h-11 w-11 p-0 bg-white/60 dark:bg-black/40 border-2 border-gray-300/60 dark:border-gray-700/60 hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105 active:scale-95 transition-all shadow-md backdrop-blur-sm"
                     onClick={handleDirectionClick}
-                    className="bg-transparent border-transparent hover:bg-transparent hover:border-transparent"
                     data-testid={`button-direction-${rowId}`}
                   >
-                    <SiGooglemaps className="w-4 h-4 text-red-500" />
+                    <SiGooglemaps className="w-5 h-5 text-red-500" />
                   </Button>
                   <Button
                     variant="ghost"
-                    size="sm"
+                    className="h-11 w-11 p-0 bg-white/60 dark:bg-black/40 border-2 border-gray-300/60 dark:border-gray-700/60 hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105 active:scale-95 transition-all shadow-md backdrop-blur-sm"
                     onClick={handleWazeClick}
-                    className="bg-transparent border-transparent hover:bg-transparent hover:border-transparent"
                     data-testid={`button-waze-${rowId}`}
                   >
-                    <SiWaze className="w-4 h-4 text-blue-500" />
+                    <SiWaze className="w-5 h-5 text-blue-500" />
                   </Button>
                 </>
               )}

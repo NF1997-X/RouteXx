@@ -751,7 +751,7 @@ export function DataTable({
       data-testid="data-table"
     >
       {/* Top Row: Entries (Left) and Customize Buttons (Right) */}
-      <div className="px-6 py-3 border-b border-border/20 bg-gradient-to-r from-blue-500/5 via-transparent to-blue-500/5 dark:from-blue-500/5 dark:via-transparent dark:to-blue-500/5 backdrop-blur-sm text-[10px]" style={{ fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif" }}>
+      <div className="px-6 py-3 border-b border-border/20 bg-gradient-to-r from-blue-500/5 via-transparent to-blue-500/5 dark:from-blue-500/5 dark:via-transparent dark:to-blue-500/5 backdrop-blur-sm text-[10px] rounded-t-xl" style={{ fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif" }}>
         <div className="flex flex-row gap-3 items-center justify-between">
           
           {/* Left Side: Entries Selector */}
@@ -1110,7 +1110,21 @@ export function DataTable({
             )}
             {filterValue.map(route => (
               <div key={route} className="flex items-center gap-0.5 px-2 py-0.5 bg-transparent border border-transparent rounded-full text-gray-400 text-xs">
-                <Filter className="w-2.5 h-2.5" />
+                {route.startsWith("SL ") ? (
+                  <img 
+                    src="/selangor-flag.png" 
+                    alt="Selangor Flag" 
+                    className="inline-block w-4 h-2 object-cover mr-1.5"
+                  />
+                ) : route.startsWith("KL ") ? (
+                  <img 
+                    src="/kl-flag.png" 
+                    alt="KL Flag" 
+                    className="inline-block w-4 h-2 object-cover mr-1.5"
+                  />
+                ) : (
+                  <Filter className="w-2.5 h-2.5" />
+                )}
                 <span>{route}</span>
                 <button onClick={() => toggleRouteFilter(route)} className="ml-0.5 p-0.5 hover:text-red-600 flex items-center justify-center rounded-full hover:bg-red-500/10" aria-label={`Remove route filter: ${route}`}>
                   <X className="w-2.5 h-2.5 text-red-500" />
@@ -1156,7 +1170,7 @@ export function DataTable({
                           <TableHead
                             ref={provided.innerRef}
                             {...provided.draggableProps}
-                            className="px-4 py-3 text-center table-header-footer-12px font-medium text-blue-700 dark:text-blue-300 tracking-wide border-b border-border sticky top-0 bg-white dark:bg-slate-900 shadow-sm whitespace-nowrap"
+                            className="px-4 py-3 text-center table-header-footer-12px font-semibold tracking-wide border-b border-border sticky top-0 bg-white dark:bg-slate-900 shadow-sm whitespace-nowrap"
                             style={{
                               textAlign: "center",
                               textDecoration: "normal",
@@ -1249,6 +1263,7 @@ export function DataTable({
                           key={row.id}
                           draggableId={row.id}
                           index={index}
+                          isDragDisabled={row.active === false || !editMode}
                         >
                           {(provided, snapshot) => (
                             <TableRow
@@ -1305,13 +1320,13 @@ export function DataTable({
                                       minWidth: "120px",
                                     }),
                                     ...(column.dataKey === "code" && {
-                                      minWidth: "100px",
+                                      minWidth: "80px",
                                     }),
                                     ...(column.dataKey === "route" && {
-                                      minWidth: "90px",
+                                      minWidth: "70px",
                                     }),
                                     ...(column.dataKey === "no" && {
-                                      minWidth: "70px",
+                                      minWidth: "50px",
                                     }),
                                     ...(column.dataKey === "kilometer" && {
                                       minWidth: "80px",
@@ -1724,24 +1739,24 @@ export function DataTable({
           {/* Pagination Controls */}
           {!disablePagination && (
             <div className="flex flex-col items-center gap-2 px-4 py-2 border-t border-blue-200 dark:border-blue-500/20 transition-smooth-fast">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 {/* Show First button only when currentPage > 3 (has 3+ pages before) */}
                 {currentPage > 3 && (
                   <Button
                     variant="outline"
                     size="xs"
                     onClick={() => goToPage(1)}
-                    className="pagination-button"
+                    className="pagination-button h-6 w-6 p-0"
                     data-testid="button-first-page"
                   >
-                    <ChevronsLeft className="h-3 w-3" />
+                    <ChevronsLeft className="h-2.5 w-2.5" />
                   </Button>
                 )}
 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5">
                   {(() => {
-                    // Calculate sliding window of max 6 pages
-                    const maxButtons = 6;
+                    // Calculate sliding window of max 5 pages
+                    const maxButtons = 5;
                     
                     // If total pages <= maxButtons, show all pages
                     if (totalPages <= maxButtons) {
@@ -1758,7 +1773,7 @@ export function DataTable({
                             variant="outline"
                             size="xs"
                             onClick={() => goToPage(pageNum)}
-                            className={`pagination-button page-number ${
+                            className={`pagination-button page-number h-6 min-w-6 px-1.5 text-[10px] ${
                               isCurrentPage ? "active" : ""
                             }`}
                             data-testid={`button-page-${pageNum}`}
@@ -1792,7 +1807,7 @@ export function DataTable({
                           variant="outline"
                           size="xs"
                           onClick={() => goToPage(pageNum)}
-                          className={`pagination-button page-number ${
+                          className={`pagination-button page-number h-6 min-w-6 px-1.5 text-[10px] ${
                             isCurrentPage ? "active" : ""
                           }`}
                           data-testid={`button-page-${pageNum}`}
@@ -1810,10 +1825,10 @@ export function DataTable({
                     variant="outline"
                     size="xs"
                     onClick={() => goToPage(totalPages)}
-                    className="pagination-button"
+                    className="pagination-button h-6 w-6 p-0"
                     data-testid="button-last-page"
                   >
-                    <ChevronsRight className="h-3 w-3" />
+                    <ChevronsRight className="h-2.5 w-2.5" />
                   </Button>
                 )}
               </div>

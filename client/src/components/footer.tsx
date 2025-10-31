@@ -126,20 +126,16 @@ export function Footer({ editMode = false }: FooterProps) {
   return (
     <>
       <footer 
-        className={`z-40 w-full border-t-2 border-blue-500/50 dark:border-blue-400/50 bg-gradient-to-r from-blue-500/10 via-blue-600/10 to-blue-700/10 dark:from-blue-500/20 dark:via-blue-600/20 dark:to-blue-700/20 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-lg shadow-blue-500/20 transition-all duration-500 ease-out ${
+        className={`fixed bottom-0 left-0 right-0 z-40 w-full border-t-2 border-blue-500/50 dark:border-blue-400/50 bg-gradient-to-r from-blue-500/10 via-blue-600/10 to-blue-700/10 dark:from-blue-500/20 dark:via-blue-600/20 dark:to-blue-700/20 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-lg shadow-blue-500/20 transition-all duration-500 ease-out ${
           isVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
         }`}
       >
         <div className="container mx-auto px-4">
-          <div className={`flex items-center justify-center gap-2 transition-all duration-700 ease-out text-[11px] py-3 ${
+          <div className={`flex items-center justify-center transition-all duration-700 ease-out text-[11px] py-3 ${
             isLoaded ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
           }`}>
-            <div className="text-slate-600 dark:text-slate-400 font-medium">
-              Delivering Convenience
-            </div>
-            <div className="w-1.5 h-1.5 bg-blue-500/60 dark:bg-blue-400/60 rounded-full"></div>
-            <div className="text-slate-600 dark:text-slate-400 font-medium">
-              One Route at a Time
+            <div className="animated-gradient-text font-semibold">
+              © 2025 All Rights Reserved • Educational Purpose Only
             </div>
           </div>
         </div>

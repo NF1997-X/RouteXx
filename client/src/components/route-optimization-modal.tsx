@@ -21,6 +21,8 @@ interface RouteOptimizationModalProps {
   onOpenChange: (open: boolean) => void;
   rows: TableRow[];
   selectedRowIds?: string[];
+  previewMode?: boolean;
+  onApplyTempOrder?: (rowIds: string[]) => void;
 }
 
 export function RouteOptimizationModal({
@@ -28,6 +30,8 @@ export function RouteOptimizationModal({
   onOpenChange,
   rows,
   selectedRowIds,
+  previewMode = false,
+  onApplyTempOrder,
 }: RouteOptimizationModalProps) {
   const [algorithm, setAlgorithm] = useState<'nearest_neighbor' | 'genetic' | 'simulated_annealing'>('nearest_neighbor');
   const [prioritizeDelivery, setPrioritizeDelivery] = useState(false);
@@ -112,7 +116,26 @@ export function RouteOptimizationModal({
   };
 
   const handleApply = () => {
-    applyOptimizationMutation.mutate();
+    if (previewMode && onApplyTempOrder && optimizationResult) {
+      // Preview mode: Apply temporary order without saving to database
+      const optimizedIds = new Set(optimizationResult.optimizedOrder);
+      const remainingRows = rows
+        .filter(row => !optimizedIds.has(row.id))
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map(row => row.id);
+      
+      const fullOrderedIds = [...optimizationResult.optimizedOrder, ...remainingRows];
+      
+      onApplyTempOrder(fullOrderedIds);
+      toast({
+        title: "Preview Route Applied",
+        description: "Optimized route applied temporarily. Changes won't be saved.",
+      });
+      handleClose();
+    } else {
+      // Normal mode: Save to database
+      applyOptimizationMutation.mutate();
+    }
   };
 
   const handleClose = () => {
