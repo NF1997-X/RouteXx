@@ -6,8 +6,6 @@ var __export = (target, all) => {
 
 // server/index.ts
 import express2 from "express";
-
-// server/routes.ts
 import { createServer } from "http";
 
 // shared/schema.ts
@@ -521,22 +519,28 @@ var DatabaseStorage = class {
         for (let i = 0; i < defaultRows.length; i++) {
           const row = defaultRows[i];
           const sortOrder = row.location === "QL Kitchen" ? -1 : i - 1;
-          await db.insert(tableRows).values({
-            no: row.no,
-            route: row.route,
-            code: row.code,
-            location: row.location,
-            delivery: row.delivery,
-            info: row.info,
-            tngSite: row.tngSite,
-            tngRoute: row.tngRoute,
-            destination: row.destination,
-            latitude: row.latitude,
-            longitude: row.longitude,
-            images: row.images,
-            qrCode: row.qrCode,
-            sortOrder
-          });
+          try {
+            await db.insert(tableRows).values({
+              no: row.no,
+              route: row.route,
+              code: row.code,
+              location: row.location,
+              delivery: row.delivery,
+              info: row.info,
+              tngSite: row.tngSite,
+              tngRoute: row.tngRoute,
+              destination: row.destination,
+              latitude: row.latitude,
+              longitude: row.longitude,
+              images: row.images,
+              qrCode: row.qrCode,
+              sortOrder
+            });
+          } catch (insertError) {
+            if (insertError?.code !== "23505") {
+              throw insertError;
+            }
+          }
         }
       }
     } catch (error) {
@@ -905,8 +909,8 @@ import { z as z2 } from "zod";
 
 // server/routeOptimizer.ts
 var QL_KITCHEN_LOCATION = {
-  latitude: 3.0738,
-  longitude: 101.5183
+  latitude: 3.06955,
+  longitude: 101.5469179
 };
 var AVERAGE_SPEED_KMH = 40;
 var FUEL_CONSUMPTION_PER_KM = 0.12;
@@ -1190,8 +1194,8 @@ function optimizeRoute(rows, algorithm = "nearest_neighbor", startLocation = QL_
 // server/openrouteservice.ts
 var OPENROUTESERVICE_API_KEY = process.env.OPENROUTESERVICE_API_KEY;
 var QL_KITCHEN_LOCATION2 = {
-  latitude: 3.0738,
-  longitude: 101.5183
+  latitude: 3.06955,
+  longitude: 101.5469179
 };
 async function calculateRouteForLorry(destination) {
   if (!OPENROUTESERVICE_API_KEY) {
@@ -1282,7 +1286,7 @@ async function calculateRoutesForDestinations(destinations) {
 
 // server/routes.ts
 var uuidSchema = z2.string().uuid();
-async function registerRoutes(app2) {
+async function registerRoutes(app2, server) {
   app2.get("/api/table-rows", async (req, res) => {
     try {
       const rows = await storage.getTableRows();
@@ -2171,8 +2175,6 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to delete custom table" });
     }
   });
-  const httpServer = createServer(app2);
-  return httpServer;
 }
 
 // server/vite.ts
@@ -2224,6 +2226,7 @@ var vite_config_default = defineConfig({
   server: {
     host: "0.0.0.0",
     port: 5e3,
+    strictPort: true,
     hmr: {
       clientPort: 443,
       protocol: "wss"
@@ -2321,7 +2324,6 @@ app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-  res.header("Access-Control-Allow-Credentials", "true");
   res.header("Cache-Control", "no-cache, no-store, must-revalidate");
   res.header("Pragma", "no-cache");
   res.header("Expires", "0");
@@ -2358,9 +2360,14 @@ app.use((req, res, next) => {
 var port = parseInt(process.env.PORT || "5000", 10);
 (async () => {
   try {
-    const server = await registerRoutes(app);
+    const server = createServer(app);
+    const startupTimeout = setTimeout(() => {
+      log("Server startup timeout - taking too long to initialize", "error");
+      process.exit(1);
+    }, 3e4);
     await new Promise((resolve, reject) => {
       server.on("error", (error) => {
+        clearTimeout(startupTimeout);
         if (error.code === "EADDRINUSE") {
           log(`Port ${port} is already in use`, "error");
           reject(error);
@@ -2380,6 +2387,9 @@ var port = parseInt(process.env.PORT || "5000", 10);
         resolve();
       });
     });
+    clearTimeout(startupTimeout);
+    log("Registering routes and initializing database connections...");
+    await registerRoutes(app, server);
     if (app.get("env") === "development") {
       await setupVite(app, server);
     } else {
